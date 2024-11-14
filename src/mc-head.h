@@ -70,4 +70,16 @@ typedef size_t usize;
 typedef i32 pokemon_type_t;
 
 typedef struct {
-} MonteCarloThreadInfo;
+  usize id;
+  u8 attributes[];
+} Card;
+
+typedef struct {
+  usize total;
+  usize attributes_per_card;
+  Card* cards;
+} CardList;
+
+void card_list_free(CardList** list);
+
+CardList* card_list_from_file(const char* filepath);

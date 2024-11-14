@@ -91,6 +91,51 @@ f32 typechart_x_attack_y_full(
   return effect_x1_y > effect_x2_y ? effect_x1_y : effect_x2_y;
 }
 
+void card_list_free(CardList** list) {
+  assert(list && "Cannot pass a NULL to free");
+  free(*list);
+  *list = NULL;
+}
+
+CardList* card_list_from_file(const char* const filepath) {
+  FILE* const file = fopen(filepath, "rt");
+
+  if (!file) {
+    fprintf(stderr, "Failed to open file: %s\n", filepath);
+    perror("");
+    return NULL;
+  }
+
+  u32 total = 0;
+  u32 attributes_per_card = 0;
+
+  if (fscanf(file, "%u", &total) != 1) { // NOLINT(*cert-err*)
+    fprintf(stderr, "Failed to read total unique card count\n");
+    return NULL;
+  }
+
+  if (fscanf(file, "%u", &attributes_per_card) != 1) { // NOLINT(*cert-err*)
+    fprintf(stderr, "Failed to read atrributes per  card\n");
+    return NULL;
+  }
+
+  assert(total != 0 && "Cannot have an empty cardlist");
+  assert(
+    attributes_per_card != 0
+    && "Card lists must have at least one attribute per card"
+  );
+
+  fclose(file);
+
+  CardList* const list = calloc(1, sizeof(CardList));
+  *list = (CardList
+  ){.total = total,
+    .attributes_per_card = attributes_per_card,
+    .cards = calloc(total, sizeof(Card))};
+
+  return list;
+}
+
 void simulation_get_setup(
   const char* const filename,
   char filepaths[][128],
@@ -103,6 +148,7 @@ void simulation_get_setup(
 
   if (file == NULL) {
     fprintf(stderr, "Can't open file: %s\n", filename);
+    perror("");
     exit(-1);
   }
 
