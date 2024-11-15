@@ -71,15 +71,17 @@ typedef i32 pokemon_type_t;
 
 typedef struct {
   usize id;
-  u8 attributes[];
+  u8* attributes;
 } Card;
 
 typedef struct {
   usize total;
   usize attributes_per_card;
-  Card* cards;
+  u8* cards;
 } CardList;
 
 void card_list_free(CardList** list);
 
 CardList* card_list_from_file(const char* filepath);
+
+Card* card_list_get_card(usize id);

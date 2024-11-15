@@ -93,6 +93,13 @@ f32 typechart_x_attack_y_full(
 
 void card_list_free(CardList** list) {
   assert(list && "Cannot pass a NULL to free");
+
+  if (*list == NULL) {
+    return;
+  }
+
+  free((*list)->cards);
+
   free(*list);
   *list = NULL;
 }
@@ -139,9 +146,9 @@ CardList* card_list_from_file(const char* const filepath) {
 void simulation_get_setup(
   const char* const filename,
   char filepaths[][128],
-  u32* const file_count,
-  u32* const thread_count,
-  u32* const event_number
+  usize* const file_count,
+  usize* const thread_count,
+  usize* const event_number
 ) {
   // Open the file in text/translated mode
   FILE* const file = fopen(filename, "rt");
@@ -152,23 +159,26 @@ void simulation_get_setup(
     exit(-1);
   }
 
-  if (fscanf(file, "%u", event_number) != 1) { // NOLINT(*cert-err*)
+  if (fscanf(file, "%zu", event_number) != 1) { // NOLINT(*cert-err*)
     fprintf(stderr, "Failed to read event number\n");
     exit(-1);
   }
 
-  if (fscanf(file, "%u", file_count) != 1) { // NOLINT(*cert-err*)
+  if (fscanf(file, "%zu", file_count) != 1) { // NOLINT(*cert-err*)
     fprintf(stderr, "Failed to read files number\n");
     exit(-1);
   }
 
-  if (fscanf(file, "%u", thread_count) != 1) { // NOLINT(*cert-err*)
+  if (fscanf(file, "%zu", thread_count) != 1) { // NOLINT(*cert-err*)
     fprintf(stderr, "Failed to read files number threads\n");
     exit(-1);
   }
 
   for (usize i = 0; i < *file_count; ++i) {
-    fscanf(file, "%s", filepaths[i]);
+    if (fscanf(file, "%s", filepaths[i]) != 1) { // NOLINT(*cert-err*)
+      fprintf(stderr, "Failed to read file name (%zu)\n", i);
+      exit(-1);
+    }
   }
 
   fclose(file);
@@ -189,9 +199,9 @@ i32 main(const i32 argc, const char* argv[]) {
 
   char filepaths[10][128];
 
-  u32 num_files = (u32)-1;
-  u32 num_threads = (u32)-1;
-  u32 event_number = (u32)-1;
+  usize num_files = 0;
+  usize num_threads = 0;
+  usize event_number = 0;
 
   simulation_get_setup(
     argv[1],
@@ -202,7 +212,7 @@ i32 main(const i32 argc, const char* argv[]) {
   );
 
   assert(num_files >= 1);
-  assert(num_threads >= 0);
+  assert(num_threads >= 1);
   assert(event_number >= 0);
 
   run_simulation(filepaths, num_files, num_threads, event_number);
