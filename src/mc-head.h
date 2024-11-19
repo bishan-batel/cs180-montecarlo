@@ -69,19 +69,28 @@ typedef size_t usize;
 
 typedef i32 pokemon_type_t;
 
-typedef struct {
-  usize id;
-  u8* attributes;
-} Card;
+typedef u32 attribute_t;
+typedef usize card_id_t;
 
 typedef struct {
   usize total;
   usize attributes_per_card;
-  u8* cards;
+  attribute_t cards_bytes[];
 } CardList;
+
+typedef struct {
+  usize total;
+  usize card_id_t[];
+} Deck;
 
 void card_list_free(CardList** list);
 
-CardList* card_list_from_file(const char* filepath);
+const CardList* card_list_from_file(const char* filepath);
 
-Card* card_list_get_card(usize id);
+Deck* deck_from_file(const CardList* reference_list, const char* filepath);
+
+attribute_t card_list_get_attribute(
+  const CardList* list,
+  card_id_t id,
+  usize attribute_id
+);

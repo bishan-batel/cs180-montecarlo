@@ -55,7 +55,7 @@ COPY/PASTE CURRENT TEST STUFF ABOVE THIS LINE!
 2_Party2.txt
 
 8
-1
+2
 32
 2_Pokemon.txt
 2_PartyAll.txt

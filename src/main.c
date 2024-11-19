@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include "mc-head.h"
+#include <unistd.h>
 #include "ThreadSafe_PRNG.h"
 
 enum PC52_ATT {
@@ -60,7 +61,7 @@ f32 typechart_x_attack_y(
   assert(typeY >= -1 && "Invalid Type Y");
 
   // If there's no attacking type, does not contribute to outcome
-  // -1 specfically to not screw up first attacking type
+  // -1 specially to not screw up first attacking type
   if (typeX == -1) {
     return -1.0f;
   }
@@ -98,31 +99,30 @@ void card_list_free(CardList** list) {
     return;
   }
 
-  free((*list)->cards);
-
   free(*list);
   *list = NULL;
 }
 
-CardList* card_list_from_file(const char* const filepath) {
+const CardList* card_list_from_file(const char* const filepath) {
+  assert(filepath && "Invalid Filepath");
+
   FILE* const file = fopen(filepath, "rt");
 
   if (!file) {
-    fprintf(stderr, "Failed to open file: %s\n", filepath);
-    perror("");
+    perror("Failed to open cardfile");
     return NULL;
   }
 
-  u32 total = 0;
-  u32 attributes_per_card = 0;
+  usize total = 0;
+  usize attributes_per_card = 0;
 
-  if (fscanf(file, "%u", &total) != 1) { // NOLINT(*cert-err*)
-    fprintf(stderr, "Failed to read total unique card count\n");
+  if (fscanf(file, "%zu", &total) != 1) { // NOLINT(*cert-err*)
+    perror("Failed to read total unique card count\n");
     return NULL;
   }
 
-  if (fscanf(file, "%u", &attributes_per_card) != 1) { // NOLINT(*cert-err*)
-    fprintf(stderr, "Failed to read atrributes per  card\n");
+  if (fscanf(file, "%zu", &attributes_per_card) != 1) { // NOLINT(*cert-err*)
+    perror("Failed to read atrributes per  card\n");
     return NULL;
   }
 
@@ -132,16 +132,51 @@ CardList* card_list_from_file(const char* const filepath) {
     && "Card lists must have at least one attribute per card"
   );
 
-  fclose(file);
+  CardList* list = calloc(
+    1,
+    sizeof(CardList) + attributes_per_card * total * sizeof(attribute_t)
+  );
 
-  CardList* const list = calloc(1, sizeof(CardList));
-  *list = (CardList
-  ){.total = total,
+  if (!list) {
+    perror("Failed to allocate data for card list");
+    fclose(file);
+    return NULL;
+  }
+
+  *list = (CardList){
+    .total = total,
     .attributes_per_card = attributes_per_card,
-    .cards = calloc(total, sizeof(Card))};
+  };
+
+  for (usize i = 0; i < total * attributes_per_card; i++) {
+    attribute_t* const attribute_ptr = &list->cards_bytes[i];
+
+    if (fscanf(file, "%u", attribute_ptr) != 1) { // NOLINT(*cert-err*)
+      perror("Failed to read attribute");
+      fclose(file);
+      card_list_free(&list);
+      return NULL;
+    }
+  }
+
+  fclose(file);
 
   return list;
 }
+
+attribute_t card_list_get_attribute(
+  const CardList* list,
+  const usize id,
+  const card_id_t attribute_id
+) {
+  assert(list && "Invalid list pointer");
+  assert(id < list->total && "Invalid Card Index");
+  assert(attribute_id < list->attributes_per_card && "Invalid Attribute Index");
+
+  return list->cards_bytes[list->attributes_per_card * id + attribute_id];
+}
+
+const Deck* read_deck(const CardList* reference_list, const char* filepath) {}
 
 void simulation_get_setup(
   const char* const filename,
@@ -154,29 +189,28 @@ void simulation_get_setup(
   FILE* const file = fopen(filename, "rt");
 
   if (file == NULL) {
-    fprintf(stderr, "Can't open file: %s\n", filename);
-    perror("");
+    perror("Can't open file");
     exit(-1);
   }
 
   if (fscanf(file, "%zu", event_number) != 1) { // NOLINT(*cert-err*)
-    fprintf(stderr, "Failed to read event number\n");
+    perror("Failed to read event number");
     exit(-1);
   }
 
   if (fscanf(file, "%zu", file_count) != 1) { // NOLINT(*cert-err*)
-    fprintf(stderr, "Failed to read files number\n");
+    perror("Failed to read files number");
     exit(-1);
   }
 
   if (fscanf(file, "%zu", thread_count) != 1) { // NOLINT(*cert-err*)
-    fprintf(stderr, "Failed to read files number threads\n");
+    perror("Failed to read files number threads");
     exit(-1);
   }
 
   for (usize i = 0; i < *file_count; ++i) {
     if (fscanf(file, "%s", filepaths[i]) != 1) { // NOLINT(*cert-err*)
-      fprintf(stderr, "Failed to read file name (%zu)\n", i);
+      perror("Failed to read file name");
       exit(-1);
     }
   }
@@ -184,16 +218,9 @@ void simulation_get_setup(
   fclose(file);
 }
 
-void run_simulation(
-  const char filepaths[10][128],
-  const usize num_files,
-  const usize num_threads,
-  const usize event_number
-) {}
-
 i32 main(const i32 argc, const char* argv[]) {
   if (argc < 2) {
-    fprintf(stderr, "Insufficient parameters supplied\n");
+    perror("Insufficient parameters supplied");
     return -1;
   }
 
@@ -215,7 +242,24 @@ i32 main(const i32 argc, const char* argv[]) {
   assert(num_threads >= 1);
   assert(event_number >= 0);
 
-  run_simulation(filepaths, num_files, num_threads, event_number);
+  chdir("SimEvents");
 
+  CardList* unique_cards = card_list_from_file(filepaths[0]);
+
+  if (!unique_cards) {
+    return -1;
+  }
+
+  for (usize i = 0; i < unique_cards->total; i++) {
+    printf("%zu: ", i);
+    for (usize j = 0; j < unique_cards->attributes_per_card; j++) {
+      printf("%d, ", card_list_get_attribute(unique_cards, i, j));
+    }
+    printf("\n");
+  }
+
+  card_list_free(&unique_cards);
   return 0;
 }
+
+Deck* deck_from_file(const CardList* reference_list, const char* filepath) {}
