@@ -81,14 +81,14 @@ typedef int errno_t;
 typedef usize event_id_t;
 
 /**
- * @brief Pokemon Type ID
- */
-typedef i32 pokemon_id_t;
-
-/**
  * @brief Card Attribute Value
  */
 typedef i32 attribute_t;
+
+/**
+ * @brief Pokemon Type ID
+ */
+typedef attribute_t pokemon_id_t;
 
 /**
  * @brief Card Attribute ID Value
@@ -109,7 +109,7 @@ typedef usize card_id_t;
 typedef void* (*ThreadFunction)(void*);
 
 /**
- * @brief Information
+ * @brief Information about a collection of unique cards
  */
 typedef struct {
   usize total;
@@ -117,11 +117,29 @@ typedef struct {
   attribute_t cards_bytes[];
 } CardList;
 
+void card_list_free(CardList** list);
+
+CardList* card_list_from_file(const char* filepath);
+
+attribute_t card_list_get_attribute(
+  const CardList* list,
+  card_id_t id,
+  attribute_id_t attribute_id
+);
+
 typedef struct {
   usize total;
   const CardList* reference_list;
   card_id_t cards[];
 } Deck;
+
+Deck* deck_from_file(const CardList* reference_list, const char* filepath);
+
+Deck* deck_clone(const Deck* deck);
+
+void deck_shuffle(randData* rng, Deck* deck);
+
+void deck_free(Deck** deck);
 
 typedef struct {
   const Deck* deck;
@@ -135,20 +153,8 @@ void* event_worker_thread(WorkerThreadDescriptor*);
 static const ThreadFunction EVENT_WORKER_THREAD =
   (ThreadFunction)event_worker_thread;
 
-void card_list_free(CardList** list);
+typedef bool (*ProbabilityEvent)(Deck* deck, randData* data);
 
-CardList* card_list_from_file(const char* filepath);
+bool event_playingcards(Deck* deck, randData* data);
 
-attribute_t card_list_get_attribute(
-  const CardList* list,
-  card_id_t id,
-  attribute_id_t attribute_id
-);
-
-Deck* deck_from_file(const CardList* reference_list, const char* filepath);
-
-Deck* deck_clone(const Deck* deck);
-
-void deck_shuffle(randData* rng, Deck* deck);
-
-void deck_free(Deck** deck);
+static const ProbabilityEvent PROBABILITY_EVENTS[] = {NULL};
