@@ -8,21 +8,7 @@
 #include <unistd.h>
 #include "ThreadSafe_PRNG.h"
 
-const usize ITERATION_COUNT = 10000;
-
-enum PlayingCardAttribute {
-  PC52_ATTR_VALUE,
-  PC52_ATTR_COLOR,
-  PC52_ATTR_SUIT,
-  PC52_ATTR_FACE
-};
-
-enum PokemonAttribute {
-  POKEMON_ATTR_EVOLINE,
-  POKEMON_ATTR_TYPE1,
-  POKEMON_ATTR_TYPE2,
-  POKEMON_ATTR_EVOSTAGE
-};
+static const usize ITERATION_COUNT = 2500000;
 
 /*
  *  Multiplier  (Effectiveness)             (EXAMPLE, with types)
@@ -322,14 +308,18 @@ Deck* deck_clone(const Deck* const deck) {
   return clone;
 }
 
-void deck_shuffle(randData* const rng, Deck* const deck) {
+void deck_shuffle(Deck* const deck, randData* const rng) {
 
   for (usize i = 0; i < deck->total; i++) {
     usize j = (usize)RandomInt(0, (i32)deck->total, rng);
 
-    deck->cards[i] ^= deck->cards[j];
-    deck->cards[j] ^= deck->cards[i];
-    deck->cards[i] ^= deck->cards[j];
+    card_id_t temp = deck->cards[i];
+    deck->cards[i] = deck->cards[j];
+    deck->cards[j] = temp;
+
+    /* deck->cards[i] ^= deck->cards[j]; */
+    /* deck->cards[j] ^= deck->cards[i]; */
+    /* deck->cards[i] ^= deck->cards[j]; */
   }
 }
 
@@ -399,8 +389,8 @@ bool run_simulation_threads(
 
   free(threads);
 
-  f32 probability = (f32)successes / (f32)total;
-  printf("(%zu) %f\n", thread_count, probability);
+  f64 probability = (f64)successes / (f64)total;
+  printf("%lf%%\n", 100.f * probability);
 
   return did_fail;
 }

@@ -108,6 +108,20 @@ typedef usize card_id_t;
  */
 typedef void* (*ThreadFunction)(void*);
 
+enum PlayingCardAttribute {
+  PC52_ATTR_VALUE,
+  PC52_ATTR_COLOR,
+  PC52_ATTR_SUIT,
+  PC52_ATTR_FACE
+};
+
+enum PokemonAttribute {
+  POKEMON_ATTR_EVOLINE,
+  POKEMON_ATTR_TYPE1,
+  POKEMON_ATTR_TYPE2,
+  POKEMON_ATTR_EVOSTAGE
+};
+
 /**
  * @brief Information about a collection of unique cards
  */
@@ -137,7 +151,7 @@ Deck* deck_from_file(const CardList* reference_list, const char* filepath);
 
 Deck* deck_clone(const Deck* deck);
 
-void deck_shuffle(randData* rng, Deck* deck);
+void deck_shuffle(Deck* deck, randData* rng);
 
 void deck_free(Deck** deck);
 
@@ -153,8 +167,8 @@ void* event_worker_thread(WorkerThreadDescriptor*);
 static const ThreadFunction EVENT_WORKER_THREAD =
   (ThreadFunction)event_worker_thread;
 
-typedef bool (*ProbabilityEvent)(Deck* deck, randData* data);
+typedef bool (*ProbabilityEvent)(const Deck* deck, randData* data);
 
-bool event_playingcards(Deck* deck, randData* data);
+bool event_pc_royal_flush(const Deck* deck, randData* data);
 
-static const ProbabilityEvent PROBABILITY_EVENTS[] = {NULL};
+static const ProbabilityEvent PROBABILITY_EVENTS[] = {event_pc_royal_flush};
