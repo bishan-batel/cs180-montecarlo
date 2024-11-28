@@ -1,11 +1,20 @@
+
 1
 2
 4
+1_PlayingCards.txt
+1_Deck1.txt
+
+
+3
+2
+100
 1_PlayingCards.txt
 1_Deck1.txt
 
 ********************************************
 COPY/PASTE CURRENT TEST STUFF ABOVE THIS LINE!
+
 1
 2
 4
@@ -17,12 +26,6 @@ COPY/PASTE CURRENT TEST STUFF ABOVE THIS LINE!
 2
 2
 1
-1_PlayingCards.txt
-1_Deck1.txt
-
-3
-2
-100
 1_PlayingCards.txt
 1_Deck1.txt
 

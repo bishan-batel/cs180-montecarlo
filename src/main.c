@@ -311,15 +311,11 @@ Deck* deck_clone(const Deck* const deck) {
 void deck_shuffle(Deck* const deck, randData* const rng) {
 
   for (usize i = 0; i < deck->total; i++) {
-    usize j = (usize)RandomInt(0, (i32)deck->total, rng);
+    usize j = (usize)RandomInt(0, (i32)deck->total - 1, rng);
 
     card_id_t temp = deck->cards[i];
     deck->cards[i] = deck->cards[j];
     deck->cards[j] = temp;
-
-    /* deck->cards[i] ^= deck->cards[j]; */
-    /* deck->cards[j] ^= deck->cards[i]; */
-    /* deck->cards[i] ^= deck->cards[j]; */
   }
 }
 
@@ -350,7 +346,7 @@ bool run_simulation_threads(
       .iterations = ITERATION_COUNT,
       .event = event,
       .successes = 0,
-      .deck = decks[0],
+      .deck = decks[i % deck_count],
     };
 
     const errno_t err = pthread_create(
@@ -393,6 +389,12 @@ bool run_simulation_threads(
   printf("%lf%%\n", 100.f * probability);
 
   return did_fail;
+}
+
+card_id_t deck_pull(const Deck* const deck, randData* const rng) {
+  const usize i = (usize)RandomInt(0, (i32)deck->total - 1, rng);
+
+  return deck->cards[i];
 }
 
 i32 main(const i32 argc, const char* argv[]) {

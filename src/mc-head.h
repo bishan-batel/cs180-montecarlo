@@ -153,6 +153,8 @@ Deck* deck_clone(const Deck* deck);
 
 void deck_shuffle(Deck* deck, randData* rng);
 
+card_id_t deck_pull(const Deck* deck, randData* rng);
+
 void deck_free(Deck** deck);
 
 typedef struct {
@@ -171,4 +173,11 @@ typedef bool (*ProbabilityEvent)(const Deck* deck, randData* data);
 
 bool event_pc_royal_flush(const Deck* deck, randData* data);
 
-static const ProbabilityEvent PROBABILITY_EVENTS[] = {event_pc_royal_flush};
+bool event_pc_four_of_a_kind(const Deck* deck, randData* data);
+
+bool event_pc_event3(const Deck* deck, randData* data);
+
+static const ProbabilityEvent PROBABILITY_EVENTS[] = {
+  event_pc_royal_flush,
+  event_pc_four_of_a_kind
+};
