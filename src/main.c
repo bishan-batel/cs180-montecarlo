@@ -10,80 +10,35 @@
 
 static const usize ITERATION_COUNT = 2500000;
 
-/*
- *  Multiplier  (Effectiveness)             (EXAMPLE, with types)
- *  ****************************************************************
- *  1x          (regular effectiveness)     (grass against fighting)
- *  2x          (super effective!)          (water against fire)
- *  0.25x       (not very effective)        (normal against steel)
- *  0           (immune)                    (ground against flying)
- */
-static const f32 POKEMON_MULTIPLIER_LOOKUP[4] = {1, 2, 0.5f, 0};
-
-// The integers in the table below correspond to the hash above
-// aka, use the ints from the table to access the floats above
-/**
- * 2D Table to get the multipler type between two pokemon types
- *
- * ex.
- *
- * To get the multipler of a fire type attacking a water type,
- *
- * POKEMON_MULTIPLIER_LOOKUP[POKEMON_TYPE_INFO[FIRE_ID][WATER_ID]]
- */
-static const usize POKEMON_TYPE_INFO[18][18] = {
-  {0, 0, 0, 0, 0, 2, 0, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  {1, 0, 2, 2, 0, 1, 2, 3, 1, 0, 0, 0, 0, 2, 1, 0, 1, 2},
-  {0, 1, 0, 0, 0, 2, 1, 0, 2, 0, 0, 1, 2, 0, 0, 0, 0, 0},
-  {0, 0, 0, 2, 2, 2, 0, 2, 3, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-  {0, 0, 3, 1, 0, 1, 2, 0, 1, 1, 0, 2, 1, 0, 0, 0, 0, 0},
-  {0, 2, 1, 0, 2, 0, 1, 0, 2, 1, 0, 0, 0, 0, 1, 0, 0, 0},
-  {0, 2, 2, 2, 0, 0, 0, 2, 2, 2, 0, 1, 0, 1, 0, 0, 1, 2},
-  {3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0},
-  {0, 0, 0, 0, 0, 1, 0, 0, 2, 2, 2, 0, 2, 0, 1, 0, 0, 1},
-  {0, 0, 0, 0, 0, 2, 1, 0, 1, 2, 2, 1, 0, 0, 1, 2, 0, 0},
-  {0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 2, 2, 0, 0, 0, 2, 0, 0},
-  {0, 0, 2, 2, 1, 1, 2, 0, 2, 2, 1, 2, 0, 0, 0, 2, 0, 0},
-  {0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 1, 2, 2, 0, 0, 2, 0, 0},
-  {0, 1, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 3, 0},
-  {0, 0, 1, 0, 1, 0, 0, 0, 2, 2, 2, 1, 0, 0, 2, 1, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 3},
-  {0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 2},
-  {0, 1, 0, 2, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1, 1, 0}
-};
-
-f32 typechart_x_attack_y(const pokemon_id_t typeX, const pokemon_id_t typeY) {
-  assert(typeX >= -1 && "Invalid Type X");
-  assert(typeY >= -1 && "Invalid Type Y");
-
+f32 pokemon_x_attack_y(const PokemonType typeX, const PokemonType typeY) {
   // If there's no attacking type, does not contribute to outcome
   // -1 specially to not screw up first attacking type
-  if (typeX == -1) {
+  if (typeX == POKEMON_TY_NONE) {
     return -1.0f;
   }
   // If there's no defending type, does not contribute to outcome
   // 1 specifically to not screw up first defending type
-  if (typeY == -1) {
+  if (typeY == POKEMON_TY_NONE) {
     return 1.0f;
   }
 
   return POKEMON_MULTIPLIER_LOOKUP[POKEMON_TYPE_INFO[typeX][typeY]];
 }
 
-f32 typechart_x_attack_y_full(
-  const pokemon_id_t type_x1,
-  const pokemon_id_t type_x2,
-  const pokemon_id_t type_y1,
-  const pokemon_id_t type_y2
+f32 pokemon_x_attack_y_full(
+  const PokemonType type_x1,
+  const PokemonType type_x2,
+  const PokemonType type_y1,
+  const PokemonType type_y2
 ) {
-  const f32 effect_x1_y = typechart_x_attack_y(type_x1, type_y1)
-                        * typechart_x_attack_y(type_x1, type_y2);
+  const f32 effect_x1_y =
+    pokemon_x_attack_y(type_x1, type_y1) * pokemon_x_attack_y(type_x1, type_y2);
 
-  const f32 effect_x2_y = //
-    type_x2 == -1         //
+  const f32 effect_x2_y =      //
+    type_x2 == POKEMON_TY_NONE //
       ? -1.0f
-      : typechart_x_attack_y(type_x2, type_y1)
-          * typechart_x_attack_y(type_x2, type_y2);
+      : pokemon_x_attack_y(type_x2, type_y1)
+          * pokemon_x_attack_y(type_x2, type_y2);
 
   return effect_x1_y > effect_x2_y ? effect_x1_y : effect_x2_y;
 }
@@ -107,7 +62,7 @@ CardList* card_list_from_file(const char* const filepath) {
 
   FILE* const file = fopen(filepath, "rt");
 
-  if (!file) {
+  if (file == NULL) {
     perror("Failed to open cardfile");
     return NULL;
   }
@@ -136,7 +91,7 @@ CardList* card_list_from_file(const char* const filepath) {
     sizeof(CardList) + attributes_per_card * total * sizeof(attribute_t)
   );
 
-  if (!list) {
+  if (list == NULL) {
     perror("Failed to allocate data for card list");
     fclose(file);
     return NULL;
@@ -309,28 +264,50 @@ Deck* deck_clone(const Deck* const deck) {
 }
 
 void deck_shuffle(Deck* const deck, randData* const rng) {
+  assert(deck != NULL && "Invalid deck instance");
 
   for (usize i = 0; i < deck->total; i++) {
-    usize j = (usize)RandomInt(0, (i32)deck->total - 1, rng);
+    const usize j = RandomInt(0, (i32)deck->total - 1, rng);
 
-    card_id_t temp = deck->cards[i];
+    const card_id_t temp = deck->cards[i];
     deck->cards[i] = deck->cards[j];
     deck->cards[j] = temp;
   }
 }
 
-typedef struct {
-  pthread_t thread;
-  WorkerThreadDescriptor descriptor;
-} WorkerThread;
+card_id_t deck_pull(const Deck* const deck, randData* const rng) {
+  assert(deck != NULL && "Invalid deck instance");
+
+  const usize i = RandomInt(0, (i32)deck->total - 1, rng);
+
+  return deck->cards[i];
+}
+
+attribute_t deck_get_attribute(
+  const Deck* deck,
+  const card_id_t id,
+  const attribute_id_t attribute_id
+) {
+  return card_list_get_attribute(deck->reference_list, id, attribute_id);
+}
 
 bool run_simulation_threads(
   const event_id_t event,
   const usize thread_count,
-  usize deck_count,
+  const usize deck_count,
   const Deck* const* const decks
 ) {
-  WorkerThread* const threads = calloc(thread_count, sizeof(WorkerThread));
+  pthread_t* const thread_handles = calloc(thread_count, sizeof(pthread_t));
+
+  if (thread_handles == NULL) {
+    perror("Failed to allocate data for worker threads");
+    return false;
+  }
+
+  WorkerContext* const threads = calloc(
+    thread_count,
+    sizeof(WorkerContext) + sizeof(Deck*) * deck_count
+  );
 
   if (threads == NULL) {
     perror("Failed to allocate data for worker threads");
@@ -340,20 +317,24 @@ bool run_simulation_threads(
   bool did_fail = false;
 
   for (usize i = 0; i < thread_count; i++) {
-    WorkerThread* worker = &threads[i];
+    WorkerContext* context = &threads[i];
 
-    worker->descriptor = (WorkerThreadDescriptor){
+    *context = (WorkerContext){
       .iterations = ITERATION_COUNT,
       .event = event,
       .successes = 0,
-      .deck = decks[i % deck_count],
+      .total_decks = deck_count,
     };
 
-    const errno_t err = pthread_create(
-      &worker->thread,
+    for (usize j = 0; j < deck_count; j++) {
+      context->decks[j] = deck_clone(decks[j]);
+    }
+
+    const errno_t err = pthread_create( //
+      &thread_handles[i],
       NULL,
       EVENT_WORKER_THREAD,
-      &worker->descriptor
+      context
     );
 
     if (err != 0) {
@@ -369,32 +350,30 @@ bool run_simulation_threads(
   usize successes = 0;
 
   for (usize i = 0; i < thread_count; i++) {
-    WorkerThread* worker = &threads[i];
+    WorkerContext* context = &threads[i];
 
-    if (pthread_join(worker->thread, NULL) != 0) {
+    if (pthread_join(thread_handles[i], NULL) != 0) {
       // log error but dont early return so we can clean up the other threads
       perror("Failed to join thread");
       did_fail = false;
       continue;
     }
 
-    WorkerThreadDescriptor* descriptor = &worker->descriptor;
-    total += descriptor->iterations;
-    successes += descriptor->successes;
+    for (usize j = 0; j < deck_count; j++) {
+      deck_free(&context->decks[j]);
+    }
+
+    total += context->iterations;
+    successes += context->successes;
   }
 
   free(threads);
+  free(thread_handles);
 
   f64 probability = (f64)successes / (f64)total;
   printf("%lf%%\n", 100.f * probability);
 
   return did_fail;
-}
-
-card_id_t deck_pull(const Deck* const deck, randData* const rng) {
-  const usize i = (usize)RandomInt(0, (i32)deck->total - 1, rng);
-
-  return deck->cards[i];
 }
 
 i32 main(const i32 argc, const char* argv[]) {
@@ -424,12 +403,17 @@ i32 main(const i32 argc, const char* argv[]) {
 
   CardList* unique_cards = card_list_from_file(filepaths[0]);
 
-  if (!unique_cards) {
+  if (unique_cards == NULL) {
     return -1;
   }
 
   const usize deck_count = num_files - 1;
   Deck** const all_decks = calloc(num_files - 1, sizeof(Deck*));
+
+  if (all_decks == NULL) {
+    perror("Failed to allocate for all decks");
+    return -1;
+  }
 
   // read all decks
   for (usize i = 0; i < deck_count; i++) {
@@ -437,12 +421,14 @@ i32 main(const i32 argc, const char* argv[]) {
 
     // early cleanup if the reading failed
     if (all_decks[i] == NULL) {
-      for (usize i = 0; i < deck_count; i++) {
+      for (usize j = 0; j < deck_count; j++) {
         deck_free(&all_decks[i]);
       }
       free(all_decks);
 
       card_list_free(&unique_cards);
+      perror("Failed to create all decks");
+      exit(-1);
     }
   }
 

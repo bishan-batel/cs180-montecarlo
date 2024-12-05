@@ -66,6 +66,8 @@ typedef uint64_t u64;
  */
 typedef size_t usize;
 
+#define countof(arr) (sizeof(arr) / sizeof(*(arr)))
+
 // -----------------------------------------------------------------------------
 //                                     MC HEAD
 // -----------------------------------------------------------------------------
@@ -84,11 +86,6 @@ typedef usize event_id_t;
  * @brief Card Attribute Value
  */
 typedef i32 attribute_t;
-
-/**
- * @brief Pokemon Type ID
- */
-typedef attribute_t pokemon_id_t;
 
 /**
  * @brief Card Attribute ID Value
@@ -115,12 +112,96 @@ enum PlayingCardAttribute {
   PC52_ATTR_FACE
 };
 
-enum PokemonAttribute {
+enum {
+  PC52_MAX_VALUE = 13
+};
+
+typedef enum {
   POKEMON_ATTR_EVOLINE,
   POKEMON_ATTR_TYPE1,
   POKEMON_ATTR_TYPE2,
   POKEMON_ATTR_EVOSTAGE
+} PokemonAttribute;
+
+typedef enum {
+  POKEMON_TY_NONE = -1,
+  POKEMON_TY_NORMAL = 0,
+  POKEMON_TY_FIGHTING,
+  POKEMON_TY_FLYING,
+  POKEMON_TY_POISON,
+  POKEMON_TY_GROUND,
+  POKEMON_TY_ROCK,
+  POKEMON_TY_BUG,
+  POKEMON_TY_GHOST,
+  POKEMON_TY_STEEL,
+  POKEMON_TY_FIRE,
+  POKEMON_TY_WATER,
+  POKEMON_TY_GRASS,
+  POKEMON_TY_ELECTRIC,
+  POKEMON_TY_PSYCHIC,
+  POKEMON_TY_ICE,
+  POKEMON_TY_DRAGON,
+  POKEMON_TY_DARK,
+  POKEMON_TY_FAIRY
+} PokemonType;
+
+typedef enum {
+  POKEMON_STAGE_0 = 0,
+  POKEMON_STAGE_1,
+  POKEMON_STAGE_2,
+  POKEMON_STAGE_MAX
+} PokemonStage;
+
+/*
+ *  Multiplier  (Effectiveness)             (EXAMPLE, with types)
+ *  ****************************************************************
+ *  1x          (regular effectiveness)     (grass against fighting)
+ *  2x          (super effective!)          (water against fire)
+ *  0.25x       (not very effective)        (normal against steel)
+ *  0           (immune)                    (ground against flying)
+ */
+static const f32 POKEMON_MULTIPLIER_LOOKUP[4] = {1, 2, 0.5f, 0};
+
+// The integers in the table below correspond to the hash above
+// aka, use the ints from the table to access the floats above
+/**
+ * 2D Table to get the multipler type between two pokemon types
+ *
+ * ex.
+ *
+ * To get the multipler of a fire type attacking a water type,
+ *
+ * POKEMON_MULTIPLIER_LOOKUP[POKEMON_TYPE_INFO[FIRE_ID][WATER_ID]]
+ */
+static const usize POKEMON_TYPE_INFO[18][18] = {
+  {0, 0, 0, 0, 0, 2, 0, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {1, 0, 2, 2, 0, 1, 2, 3, 1, 0, 0, 0, 0, 2, 1, 0, 1, 2},
+  {0, 1, 0, 0, 0, 2, 1, 0, 2, 0, 0, 1, 2, 0, 0, 0, 0, 0},
+  {0, 0, 0, 2, 2, 2, 0, 2, 3, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+  {0, 0, 3, 1, 0, 1, 2, 0, 1, 1, 0, 2, 1, 0, 0, 0, 0, 0},
+  {0, 2, 1, 0, 2, 0, 1, 0, 2, 1, 0, 0, 0, 0, 1, 0, 0, 0},
+  {0, 2, 2, 2, 0, 0, 0, 2, 2, 2, 0, 1, 0, 1, 0, 0, 1, 2},
+  {3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0},
+  {0, 0, 0, 0, 0, 1, 0, 0, 2, 2, 2, 0, 2, 0, 1, 0, 0, 1},
+  {0, 0, 0, 0, 0, 2, 1, 0, 1, 2, 2, 1, 0, 0, 1, 2, 0, 0},
+  {0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 2, 2, 0, 0, 0, 2, 0, 0},
+  {0, 0, 2, 2, 1, 1, 2, 0, 2, 2, 1, 2, 0, 0, 0, 2, 0, 0},
+  {0, 0, 1, 0, 3, 0, 0, 0, 0, 0, 1, 2, 2, 0, 0, 2, 0, 0},
+  {0, 1, 0, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 3, 0},
+  {0, 0, 1, 0, 1, 0, 0, 0, 2, 2, 2, 1, 0, 0, 2, 1, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 3},
+  {0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 2},
+  {0, 1, 0, 2, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1, 1, 0}
 };
+
+f32 pokemon_x_attack_y(PokemonType typeX, PokemonType typeY);
+
+f32 pokemon_x_attack_y_full(
+  PokemonType type_x1,
+  PokemonType type_x2,
+  PokemonType type_y1,
+  PokemonType type_y2
+);
 
 /**
  * @brief Information about a collection of unique cards
@@ -157,27 +238,78 @@ card_id_t deck_pull(const Deck* deck, randData* rng);
 
 void deck_free(Deck** deck);
 
+attribute_t deck_get_attribute(
+  const Deck* deck,
+  card_id_t id,
+  attribute_id_t attribute_id
+);
+
 typedef struct {
-  const Deck* deck;
   usize iterations;
   usize successes;
   event_id_t event;
-} WorkerThreadDescriptor;
+  randData* rng;
 
-void* event_worker_thread(WorkerThreadDescriptor*);
+  usize total_decks;
+  Deck* decks[];
+} WorkerContext;
+
+void* event_worker_thread(WorkerContext*);
 
 static const ThreadFunction EVENT_WORKER_THREAD =
   (ThreadFunction)event_worker_thread;
 
-typedef bool (*ProbabilityEvent)(const Deck* deck, randData* data);
+typedef bool (*ProbabilityEvent)(const WorkerContext* ctx);
 
-bool event_pc_royal_flush(const Deck* deck, randData* data);
+/**
+ * 5 Card Pull: How often for a royal flush
+ */
+bool event_pc_1(const WorkerContext* ctx);
 
-bool event_pc_four_of_a_kind(const Deck* deck, randData* data);
+/**
+ * 5 Card Pull: How often is there 4 of a kind
+ */
+bool event_pc_2(const WorkerContext* ctx);
 
-bool event_pc_event3(const Deck* deck, randData* data);
+/**
+ * 7 Card Pull: four suits or two pairs of faces cards
+ */
+bool event_pc_3(const WorkerContext* ctx);
+
+/**
+ * How often will you encounter at least 30 switches between red and black
+ */
+bool event_pc_4(const WorkerContext* ctx);
+
+/**
+ * Draw three cards from each deck
+ * How often will:
+ * one player draws only stage 1
+ * one player draws only stage 1
+ * one player draws only stage 3
+ */
+bool event_pc_5(const WorkerContext* ctx);
+
+/**
+ * Draw two cards from each deck.
+ * How often will one of the pokemon be unable
+ * to attack one of the pokemon drawn
+ * by 2 other players
+ */
+bool event_pc_6(const WorkerContext* ctx);
+
+/**
+ * A starting hand of 7 cards drawn
+ *
+ */
+bool event_pc_7(const WorkerContext* ctx);
 
 static const ProbabilityEvent PROBABILITY_EVENTS[] = {
-  event_pc_royal_flush,
-  event_pc_four_of_a_kind
+  event_pc_1,
+  event_pc_2,
+  event_pc_3,
+  event_pc_4,
+  event_pc_5,
+  event_pc_6,
+  /* event_pc_7, */
 };
