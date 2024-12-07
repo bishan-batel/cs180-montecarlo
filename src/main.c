@@ -141,6 +141,7 @@ Deck* deck_from_file(const CardList* reference_list, const char* filepath) {
   FILE* const file = fopen(filepath, "rt");
 
   if (file == NULL) {
+    fprintf(stderr, "Can't load from %s\n", filepath);
     perror("Failed to load deck file");
     return NULL;
   }
@@ -222,13 +223,13 @@ void simulation_get_setup(
     exit(-1);
   }
 
-  if (fscanf(file, "%zu", event_number) != 1) { // NOLINT(*cert-err*)
-    perror("Failed to read event number");
+  if (fscanf(file, "%zu", file_count) != 1) { // NOLINT(*cert-err*)
+    perror("Failed to read files number");
     exit(-1);
   }
 
-  if (fscanf(file, "%zu", file_count) != 1) { // NOLINT(*cert-err*)
-    perror("Failed to read files number");
+  if (fscanf(file, "%zu", event_number) != 1) { // NOLINT(*cert-err*)
+    perror("Failed to read event number");
     exit(-1);
   }
 
@@ -304,10 +305,7 @@ bool run_simulation_threads(
     return false;
   }
 
-  WorkerContext* const threads = calloc(
-    thread_count,
-    sizeof(WorkerContext) + sizeof(Deck*) * deck_count
-  );
+  WorkerContext* const threads = calloc(thread_count, sizeof(WorkerContext));
 
   if (threads == NULL) {
     perror("Failed to allocate data for worker threads");
@@ -316,19 +314,17 @@ bool run_simulation_threads(
 
   bool did_fail = false;
 
+  printf("Running event %zu\n", event);
   for (usize i = 0; i < thread_count; i++) {
     WorkerContext* context = &threads[i];
 
-    *context = (WorkerContext){
+    threads[i] = (WorkerContext){
       .iterations = ITERATION_COUNT,
-      .event = event,
       .successes = 0,
-      .total_decks = deck_count,
+      .event = event,
+      .deck_count = deck_count,
+      .decks = decks,
     };
-
-    for (usize j = 0; j < deck_count; j++) {
-      context->decks[j] = deck_clone(decks[j]);
-    }
 
     const errno_t err = pthread_create( //
       &thread_handles[i],
@@ -353,14 +349,9 @@ bool run_simulation_threads(
     WorkerContext* context = &threads[i];
 
     if (pthread_join(thread_handles[i], NULL) != 0) {
-      // log error but dont early return so we can clean up the other threads
       perror("Failed to join thread");
-      did_fail = false;
+      did_fail = true;
       continue;
-    }
-
-    for (usize j = 0; j < deck_count; j++) {
-      deck_free(&context->decks[j]);
     }
 
     total += context->iterations;

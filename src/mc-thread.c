@@ -12,46 +12,52 @@ void* event_worker_thread(WorkerContext* const ctx) {
 
   assert(event < countof(PROBABILITY_EVENTS) && "Invalid Event");
 
-  randData rng;
+  Deck** decks = (Deck**)calloc(ctx->deck_count, sizeof(const Deck*));
 
- // ReSharper disable once CppDFALocalValueEscapesFunction
-  ctx->rng = &rng;
-  ThreadSeedRNG(ctx->rng);
-
-  /*
-  Deck* deck = deck_clone(descriptor->deck);
-  if (deck == NULL) {
-    perror("Failed to clone deck");
-    return NULL;
+  for (usize i = 0; i < ctx->deck_count; i++) {
+    decks[i] = deck_clone(ctx->decks[i]);
   }
-  */
+
+  randData random_num_generator;
+  ThreadSeedRNG(&random_num_generator);
+
+  EventContext context = {
+    .rng = &random_num_generator,
+    .deck_count = ctx->deck_count,
+    .decks = decks,
+  };
 
   usize successes = 0;
   for (usize i = 0; i < ctx->iterations; i++) {
-    successes += PROBABILITY_EVENTS[event](ctx);
+    successes += PROBABILITY_EVENTS[event](&context);
   }
 
   ctx->successes = successes;
 
-  ctx->rng = NULL;
+  for (usize i = 0; i < ctx->deck_count; i++) {
+    deck_free(&decks[i]);
+  }
 
+  free(decks);
   return NULL;
 }
 
-const Deck* ev_get_shuffled_deck(const WorkerContext* const ctx, usize i) {
-  assert(i < ctx->total_decks);
+const Deck* ev_get_shuffled_deck(const EventContext* const ctx, const usize i) {
+  assert(ctx);
+  assert(i < ctx->deck_count);
   deck_shuffle(ctx->decks[i], ctx->rng);
+
   return ctx->decks[i];
 }
 
-const Deck* ev_any_shuffled_deck(const WorkerContext* const ctx) {
+const Deck* ev_any_shuffled_deck(const EventContext* const ctx) {
   return ev_get_shuffled_deck(
     ctx,
-    RandomInt(0, (i32)ctx->total_decks - 1, ctx->rng)
+    RandomInt(0, (i32)ctx->deck_count - 1, ctx->rng)
   );
 }
 
-bool event_pc_1(const WorkerContext* const ctx) {
+bool event_pc_1(const EventContext* const ctx) {
   const Deck* deck = ev_any_shuffled_deck(ctx);
 
   const attribute_t needed_suit = card_list_get_attribute(
@@ -90,7 +96,7 @@ bool event_pc_1(const WorkerContext* const ctx) {
   return found_fold;
 }
 
-bool event_pc_2(const WorkerContext* const ctx) {
+bool event_pc_2(const EventContext* const ctx) {
   const Deck* deck = ev_any_shuffled_deck(ctx);
 
   attribute_t values[PC52_MAX_VALUE] = {0};
@@ -111,7 +117,7 @@ bool event_pc_2(const WorkerContext* const ctx) {
   return false;
 }
 
-bool event_pc_3(const WorkerContext* const ctx) {
+bool event_pc_3(const EventContext* const ctx) {
   const Deck* deck = ev_any_shuffled_deck(ctx);
 
   usize faces_frequencies[3] = {0};
@@ -147,7 +153,7 @@ bool event_pc_3(const WorkerContext* const ctx) {
   return face_pair_count >= 2;
 }
 
-bool event_pc_4(const WorkerContext* const ctx) {
+bool event_pc_4(const EventContext* const ctx) {
   const Deck* deck = ev_any_shuffled_deck(ctx);
 
   static const usize NUM_SWITCHES = 30;
@@ -172,7 +178,7 @@ bool event_pc_4(const WorkerContext* const ctx) {
   return switch_count >= NUM_SWITCHES;
 }
 
-bool event_pc_5(const WorkerContext* const ctx) {
+bool event_pc_5(const EventContext* const ctx) {
   const Deck* deck = ev_any_shuffled_deck(ctx);
 
   static const usize NUM_PLAYERS = 3;
@@ -221,7 +227,7 @@ bool event_pc_5(const WorkerContext* const ctx) {
  * to attack one of the pokemon drawn
  * by 2 other players
  */
-bool event_pc_6(const WorkerContext* const ctx) {
+bool event_pc_6(const EventContext* const ctx) {
   const Deck* deck = ev_any_shuffled_deck(ctx);
 
   assert(deck->total >= 4 && "Not enough cards for this event");
@@ -265,4 +271,6 @@ bool event_pc_6(const WorkerContext* const ctx) {
   return prod_attack == 0.0f;
 }
 
-/* bool event_pc_7(const Deck* deck, randData* data) {} */
+bool event_pc_7(const EventContext* deck) {
+  return false;
+}

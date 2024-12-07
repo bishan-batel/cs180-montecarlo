@@ -248,38 +248,43 @@ typedef struct {
   usize iterations;
   usize successes;
   event_id_t event;
-  randData* rng;
 
-  usize total_decks;
-  Deck* decks[];
+  usize deck_count;
+  const Deck* const* decks;
 } WorkerContext;
+
+typedef struct {
+  randData* rng;
+  usize deck_count;
+  Deck* const* decks;
+} EventContext;
 
 void* event_worker_thread(WorkerContext*);
 
 static const ThreadFunction EVENT_WORKER_THREAD =
   (ThreadFunction)event_worker_thread;
 
-typedef bool (*ProbabilityEvent)(const WorkerContext* ctx);
+typedef bool (*ProbabilityEvent)(const EventContext* ctx);
 
 /**
  * 5 Card Pull: How often for a royal flush
  */
-bool event_pc_1(const WorkerContext* ctx);
+bool event_pc_1(const EventContext* ctx);
 
 /**
  * 5 Card Pull: How often is there 4 of a kind
  */
-bool event_pc_2(const WorkerContext* ctx);
+bool event_pc_2(const EventContext* ctx);
 
 /**
  * 7 Card Pull: four suits or two pairs of faces cards
  */
-bool event_pc_3(const WorkerContext* ctx);
+bool event_pc_3(const EventContext* ctx);
 
 /**
  * How often will you encounter at least 30 switches between red and black
  */
-bool event_pc_4(const WorkerContext* ctx);
+bool event_pc_4(const EventContext* ctx);
 
 /**
  * Draw three cards from each deck
@@ -288,7 +293,7 @@ bool event_pc_4(const WorkerContext* ctx);
  * one player draws only stage 1
  * one player draws only stage 3
  */
-bool event_pc_5(const WorkerContext* ctx);
+bool event_pc_5(const EventContext* ctx);
 
 /**
  * Draw two cards from each deck.
@@ -296,13 +301,13 @@ bool event_pc_5(const WorkerContext* ctx);
  * to attack one of the pokemon drawn
  * by 2 other players
  */
-bool event_pc_6(const WorkerContext* ctx);
+bool event_pc_6(const EventContext* ctx);
 
 /**
  * A starting hand of 7 cards drawn
  *
  */
-bool event_pc_7(const WorkerContext* ctx);
+bool event_pc_7(const EventContext* ctx);
 
 static const ProbabilityEvent PROBABILITY_EVENTS[] = {
   event_pc_1,
@@ -311,5 +316,5 @@ static const ProbabilityEvent PROBABILITY_EVENTS[] = {
   event_pc_4,
   event_pc_5,
   event_pc_6,
-  /* event_pc_7, */
+  event_pc_7,
 };

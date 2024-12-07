@@ -1,19 +1,26 @@
-2
-2
 1
+2
+4
 1_PlayingCards.txt
 1_Deck1.txt
 
+3
 2
+100
+1_PlayingCards.txt
+1_Deck1.txt
+
+1
 2
 4
 1_PlayingCards.txt
 1_Deck1.txt
 
 
-3
+
 2
-100
+2
+1
 1_PlayingCards.txt
 1_Deck1.txt
 
@@ -47,7 +54,7 @@
 2_Party2.txt
 
 8
-1
+2
 32
 2_Pokemon.txt
 2_PartyAll.txt
