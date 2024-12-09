@@ -17,6 +17,8 @@
     devShells = forEachSupportedSystem ({ pkgs }: {
       default = pkgs.mkShell.override {}
         {
+          name = "cs180-monte-carlo";
+
           shellHook = /* bash */ ''
           '';
 
